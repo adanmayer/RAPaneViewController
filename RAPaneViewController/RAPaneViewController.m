@@ -1,17 +1,10 @@
-//
-//  IRSlidingSplitViewController.m
-//  IRSlidingSplitViewController
-//
-//  Created by Evadne Wu on 4/14/12.
-//  Copyright (c) 2012 Iridia Productions. All rights reserved.
-//
-
 #import <UIKit/UIGestureRecognizerSubclass.h>
 
-#import "IRSlidingSplitViewController.h"
-#import "IRSlidingSplitViewControllerSubclass.h"
+#import "RAPaneViewController.h"
+#import "RAPaneViewControllerSubclass.h"
+#import "RASlidingPanGestureRecognizer.h"
 
-@implementation IRSlidingSplitViewController
+@implementation RAPaneViewController
 @synthesize showingMasterViewController = _showingMasterViewController;
 @synthesize masterViewController = _masterViewController;
 @synthesize detailViewController = _detailViewController;
@@ -79,22 +72,23 @@
 	
 	[_masterViewController willMoveToParentViewController:nil];
 	[_masterViewController removeFromParentViewController];
-	[_masterViewController.view removeFromSuperview];
+	
+	if ([_masterViewController isViewLoaded])
+		[_masterViewController.view removeFromSuperview];
 	
 	_masterViewController = toMasterVC;
 	
 	if (_masterViewController) {
 	
 		[self addChildViewController:_masterViewController];
-		[self configureMasterView:_masterViewController.view];
-		[self.view addSubview:_masterViewController.view];
 		[_masterViewController didMoveToParentViewController:self];
 	
 	}
 	
 	[self didChangeValueForKey:@"masterViewController"];
 	
-	[self layoutViews];
+	if (self.isViewLoaded)
+		[self layoutViews];
 	
 	if (callback)
 		callback(YES);
@@ -116,22 +110,23 @@
 	
 	[_detailViewController willMoveToParentViewController:nil];
 	[_detailViewController removeFromParentViewController];
-	[_detailViewController.view removeFromSuperview];
+	
+	if ([_detailViewController isViewLoaded])
+		[_detailViewController.view removeFromSuperview];
 	
 	_detailViewController = toDetailVC;
 	
 	if (_detailViewController) {
 	
 		[self addChildViewController:_detailViewController];
-		[self configureDetailView:_detailViewController.view];
-		[self.view addSubview:_detailViewController.view];
 		[_detailViewController didMoveToParentViewController:self];
 	
 	}
 
 	[self didChangeValueForKey:@"detailViewController"];
 	
-	[self layoutViews];
+	if (self.isViewLoaded)
+		[self layoutViews];
 	
 	if (callback)
 		callback(YES);
@@ -176,7 +171,7 @@
 	if (_panGestureRecognizer)
 		return _panGestureRecognizer;
 	
-	_panGestureRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
+	_panGestureRecognizer = [[RASlidingPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
 	_panGestureRecognizer.delegate = self;
 	_panGestureRecognizer.cancelsTouchesInView = YES;
 
@@ -250,6 +245,24 @@
 
 }
 
+- (BOOL) slidingPanGestureRecognizer:(RASlidingPanGestureRecognizer *)recognizer canPreventGestureRecognizer:(UIGestureRecognizer *)otherRecognizer proposedAnswer:(BOOL)superAnswer {
+
+	if ([otherRecognizer.view isDescendantOfView:self.masterViewController.view])
+		return YES;
+	
+	return superAnswer;
+
+}
+
+- (BOOL) slidingPanGestureRecognizer:(RASlidingPanGestureRecognizer *)recognizer canBePreventedByGestureRecognizer:(UIGestureRecognizer *)otherRecognizer proposedAnswer:(BOOL)superAnswer {
+	
+	if ([otherRecognizer.view isDescendantOfView:self.masterViewController.view])
+		return NO;
+	
+	return superAnswer;
+
+}
+
 - (void) handlePan:(UIPanGestureRecognizer *)panGR {
 
 	#pragma unused(panGR)
@@ -262,13 +275,15 @@
 		
 		case UIGestureRecognizerStateBegan: {
 			
-			__block UIView * (^firstResponderInView)(UIView *) = [^ (UIView *view) {
+			UIView * (^firstResponderInView)(UIView *, const void *) = [^ (UIView *view, const void *continuation) {
 
 				if ([view isFirstResponder])
 					return view;
 				
+				UIView * (^continuationBlock)(UIView *, const void *) = (__bridge typeof(continuationBlock))continuation;
+				
 				for (UIView *aSubview in view.subviews) {
-					UIView *foundFirstResponder = firstResponderInView(aSubview);
+					UIView *foundFirstResponder = continuationBlock(aSubview, continuation);
 					if (foundFirstResponder)
 						return foundFirstResponder;
 				}
@@ -277,10 +292,8 @@
 
 			} copy];
 			
-			[firstResponderInView(self.masterViewController.view) resignFirstResponder];
-			[firstResponderInView(self.detailViewController.view) resignFirstResponder];
-			
-			firstResponderInView = nil;
+			[firstResponderInView(self.masterViewController.view, (__bridge const void *)firstResponderInView) resignFirstResponder];
+			[firstResponderInView(self.detailViewController.view, (__bridge const void *)firstResponderInView) resignFirstResponder];
 			
 			break;
 			
@@ -324,14 +337,31 @@
 			CGRect desiredDetailRect = [self rectForDetailView];
 			
 			if (!CGRectEqualToRect(detailRect, desiredDetailRect)) {
+			
+				BOOL (^orientationsMatch)(void) = ^ {
 
-				[UIView animateWithDuration:0.3 delay:0 options:UIViewAnimationOptionBeginFromCurrentState|UIViewAnimationOptionAllowUserInteraction animations:^{
+					UIDeviceOrientation const deviceOrientation = [UIDevice currentDevice].orientation;
+					UIInterfaceOrientation const interfaceOrientation = self.interfaceOrientation;
+					
+					return (BOOL)(deviceOrientation == (UIDeviceOrientation)interfaceOrientation);
 				
-					self.detailViewController.view.frame = [self rectForDetailView];
+				};
+			
+				if (!orientationsMatch()) {
+				
+					[UIViewController attemptRotationToDeviceOrientation];
+					
+					if (orientationsMatch())
+						break;
+				
+				}
+				
+				[UIView animateWithDuration:0.3f delay:0 options:UIViewAnimationOptionBeginFromCurrentState|UIViewAnimationOptionAllowUserInteraction animations:^{
+				
 					[self layoutViews];
 
 				} completion:nil];
-			
+
 			}
 
 			break;
@@ -385,7 +415,6 @@
 - (void) viewWillAppear:(BOOL)animated {
 
 	[super viewWillAppear:animated];
-	
 	[self layoutViews];
 
 }
@@ -394,6 +423,16 @@
 
 	UIView *masterView = self.masterViewController.view;
 	UIView *detailView = self.detailViewController.view;
+	
+	if (![masterView isDescendantOfView:self.view]) {
+		[self configureMasterView:masterView];
+		[self.view addSubview:masterView];
+	}
+	
+	if (![detailView isDescendantOfView:self.view]) {
+		[self configureDetailView:detailView];
+		[self.view addSubview:detailView];
+	}
 	
 	masterView.frame = [self rectForMasterView];
 	detailView.frame = [self rectForDetailView];
@@ -406,18 +445,6 @@
 	
 }
 
-- (BOOL) shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation {
-
-	if (!self.masterViewController || !self.detailViewController)
-		return YES;
-
-	BOOL masterVCRotatable = [self.masterViewController shouldAutorotateToInterfaceOrientation:toInterfaceOrientation];
-	BOOL detailVCRotatable = [self.detailViewController shouldAutorotateToInterfaceOrientation:toInterfaceOrientation];
-
-	return masterVCRotatable && detailVCRotatable;
-
-}
-
 - (void) configureMasterView:(UIView *)view {
 
 	//	For subclasses
@@ -427,6 +454,41 @@
 - (void) configureDetailView:(UIView *)view {
 
 	//	For subclasses
+
+}
+
+- (BOOL) childViewControllersAllowAutoRotationToInterfaceOrientation:(UIInterfaceOrientation)toOrientation {
+
+	if (!self.masterViewController || !self.detailViewController)
+		return YES;
+	
+	BOOL masterVCRotatable = [self.masterViewController shouldAutorotateToInterfaceOrientation:toOrientation];
+	BOOL detailVCRotatable = [self.detailViewController shouldAutorotateToInterfaceOrientation:toOrientation];
+
+	return masterVCRotatable && detailVCRotatable;
+	
+}
+
+- (BOOL) isPanning {
+
+	return (self.panGestureRecognizer.state == UIGestureRecognizerStateChanged);
+
+}
+
+- (BOOL) shouldAutorotate {
+
+	return ![self isPanning];
+
+}
+
+- (BOOL) shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation {
+
+	BOOL childrenRotatable = [self childViewControllersAllowAutoRotationToInterfaceOrientation:toInterfaceOrientation];
+
+	if (childrenRotatable && [self isPanning])
+		return (self.interfaceOrientation == toInterfaceOrientation);
+	
+	return childrenRotatable;
 
 }
 

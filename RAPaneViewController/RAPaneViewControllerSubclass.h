@@ -1,14 +1,7 @@
-//
-//  IRSlidingSplitViewControllerSubclass.h
-//  IRSlidingSplitViewController
-//
-//  Created by Evadne Wu on 7/8/12.
-//  Copyright (c) 2012 Iridia Productions. All rights reserved.
-//
+#import "RAPaneViewController.h"
+#import "RASlidingPanGestureRecognizer.h"
 
-#import "IRSlidingSplitViewController.h"
-
-@interface IRSlidingSplitViewController () <UIGestureRecognizerDelegate>
+@interface RAPaneViewController () <UIGestureRecognizerDelegate, RASlidingPanGestureRecognizerDelegate>
 
 - (CGRect) rectForMasterView;	//	always self.view.bounds
 - (CGRect) rectForDetailView;	//	self.view.bounds + { 200.0f, 0.0f } offset if showingMasterViewController
