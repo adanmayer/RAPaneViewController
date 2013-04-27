@@ -1,19 +1,10 @@
-//
-//  IRSlidingSplitViewController.m
-//  IRSlidingSplitViewController
-//
-//  Created by Evadne Wu on 4/14/12.
-//  Copyright (c) 2012 Iridia Productions. All rights reserved.
-//
-
 #import <UIKit/UIGestureRecognizerSubclass.h>
 
-#import "IRSlidingSplitViewController.h"
-#import "IRSlidingSplitViewControllerSubclass.h"
-#import "IRSlidingPanGestureRecognizer.h"
+#import "RAPaneViewController.h"
+#import "RAPaneViewControllerSubclass.h"
+#import "RASlidingPanGestureRecognizer.h"
 
-
-@implementation IRSlidingSplitViewController
+@implementation RAPaneViewController
 @synthesize showingMasterViewController = _showingMasterViewController;
 @synthesize masterViewController = _masterViewController;
 @synthesize detailViewController = _detailViewController;
@@ -180,7 +171,7 @@
 	if (_panGestureRecognizer)
 		return _panGestureRecognizer;
 	
-	_panGestureRecognizer = [[IRSlidingPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
+	_panGestureRecognizer = [[RASlidingPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
 	_panGestureRecognizer.delegate = self;
 	_panGestureRecognizer.cancelsTouchesInView = YES;
 
@@ -254,7 +245,7 @@
 
 }
 
-- (BOOL) slidingPanGestureRecognizer:(IRSlidingPanGestureRecognizer *)recognizer canPreventGestureRecognizer:(UIGestureRecognizer *)otherRecognizer proposedAnswer:(BOOL)superAnswer {
+- (BOOL) slidingPanGestureRecognizer:(RASlidingPanGestureRecognizer *)recognizer canPreventGestureRecognizer:(UIGestureRecognizer *)otherRecognizer proposedAnswer:(BOOL)superAnswer {
 
 	if ([otherRecognizer.view isDescendantOfView:self.masterViewController.view])
 		return YES;
@@ -263,7 +254,7 @@
 
 }
 
-- (BOOL) slidingPanGestureRecognizer:(IRSlidingPanGestureRecognizer *)recognizer canBePreventedByGestureRecognizer:(UIGestureRecognizer *)otherRecognizer proposedAnswer:(BOOL)superAnswer {
+- (BOOL) slidingPanGestureRecognizer:(RASlidingPanGestureRecognizer *)recognizer canBePreventedByGestureRecognizer:(UIGestureRecognizer *)otherRecognizer proposedAnswer:(BOOL)superAnswer {
 	
 	if ([otherRecognizer.view isDescendantOfView:self.masterViewController.view])
 		return NO;
@@ -284,13 +275,15 @@
 		
 		case UIGestureRecognizerStateBegan: {
 			
-			__block UIView * (^firstResponderInView)(UIView *) = [^ (UIView *view) {
+			UIView * (^firstResponderInView)(UIView *, const void *) = [^ (UIView *view, const void *continuation) {
 
 				if ([view isFirstResponder])
 					return view;
 				
+				UIView * (^continuationBlock)(UIView *, const void *) = (__bridge typeof(continuationBlock))continuation;
+				
 				for (UIView *aSubview in view.subviews) {
-					UIView *foundFirstResponder = firstResponderInView(aSubview);
+					UIView *foundFirstResponder = continuationBlock(aSubview, continuation);
 					if (foundFirstResponder)
 						return foundFirstResponder;
 				}
@@ -299,10 +292,8 @@
 
 			} copy];
 			
-			[firstResponderInView(self.masterViewController.view) resignFirstResponder];
-			[firstResponderInView(self.detailViewController.view) resignFirstResponder];
-			
-			firstResponderInView = nil;
+			[firstResponderInView(self.masterViewController.view, (__bridge const void *)firstResponderInView) resignFirstResponder];
+			[firstResponderInView(self.detailViewController.view, (__bridge const void *)firstResponderInView) resignFirstResponder];
 			
 			break;
 			

@@ -14,9 +14,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "FF2CD01F1538AD1E00EC1063"
-               BuildableName = "libIRSlidingSplitViewController.a"
-               BlueprintName = "IRSlidingSplitViewController"
-               ReferencedContainer = "container:IRSlidingSplitViewController.xcodeproj">
+               BuildableName = "libRAPaneViewController.a"
+               BlueprintName = "RAPaneViewController"
+               ReferencedContainer = "container:RAPaneViewController.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
