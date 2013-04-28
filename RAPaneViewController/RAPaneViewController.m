@@ -408,6 +408,10 @@
 - (void) viewDidLayoutSubviews {
 
 	[super viewDidLayoutSubviews];
+	
+	if (self.panGestureRecognizer.state == UIGestureRecognizerStateChanged)
+		return;
+	
 	[self layoutViews];
 
 }
