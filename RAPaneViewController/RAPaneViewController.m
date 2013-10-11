@@ -436,6 +436,7 @@
 	if (![detailView isDescendantOfView:self.view]) {
 		[self configureDetailView:detailView];
 		[self.view addSubview:detailView];
+		[detailView.superview insertSubview:detailView aboveSubview:masterView];
 	}
 	
 	masterView.frame = [self rectForMasterView];
@@ -444,7 +445,6 @@
 	masterView.clipsToBounds = YES;
 	detailView.clipsToBounds = YES;
 	
-	[detailView.superview bringSubviewToFront:detailView];
 	detailView.userInteractionEnabled = !self.showingMasterViewController;
 	
 }
