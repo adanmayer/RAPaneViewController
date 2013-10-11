@@ -57,6 +57,18 @@
 
 }
 
+- (void) removeViewsForViewController:(UIViewController *)controller {
+	if (self.isViewLoaded) {
+		UIViewController *presentedViewController = controller.presentedViewController;
+		if (presentedViewController) {
+			[self removeViewsForViewController:presentedViewController];
+		}
+		if (controller.isViewLoaded && [controller.view isDescendantOfView:self.view]) {
+			[controller.view removeFromSuperview];
+		}
+	}
+}
+
 - (void) setMasterViewController:(UIViewController *)toMasterVC animated:(BOOL)animate completion:(void(^)(BOOL didFinish))callback {
 
 	if (_masterViewController == toMasterVC) {
@@ -72,9 +84,7 @@
 	
 	[_masterViewController willMoveToParentViewController:nil];
 	[_masterViewController removeFromParentViewController];
-	
-	if ([_masterViewController isViewLoaded])
-		[_masterViewController.view removeFromSuperview];
+	[self removeViewsForViewController:_masterViewController];
 	
 	_masterViewController = toMasterVC;
 	
@@ -110,9 +120,7 @@
 	
 	[_detailViewController willMoveToParentViewController:nil];
 	[_detailViewController removeFromParentViewController];
-	
-	if ([_detailViewController isViewLoaded])
-		[_detailViewController.view removeFromSuperview];
+	[self removeViewsForViewController:_detailViewController];
 	
 	_detailViewController = toDetailVC;
 	
