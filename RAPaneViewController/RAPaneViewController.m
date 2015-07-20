@@ -424,13 +424,6 @@
 
 }
 
-- (void) viewWillAppear:(BOOL)animated {
-
-	[super viewWillAppear:animated];
-	[self layoutViews];
-
-}
-
 - (void) layoutViews {
 
 	UIView *masterView = self.masterViewController.view;
